@@ -1,0 +1,1435 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <time.h>
+#include <conio.h>
+
+#define MAX_LOCAIS 14
+#define MAX_DADORES 500
+#define MAX_GALARDOADOS 500
+#define MAX_RECOLHAS 5000
+#define MAX_SINAIS 5
+
+typedef struct
+{
+    int dia;
+    int mes;
+    int ano;
+    int valid;
+} data_tipo;
+
+typedef struct
+{
+    int hora;
+    int minuto;
+    int valid;
+} hora_tipo;
+
+typedef struct
+{
+    data_tipo   dataRecolha;
+    long    numero_dador;
+    float   temp;
+    int     t_a_sistolica;
+    int     t_a_diastolica;
+    char    estadoDador;
+} Sinais;
+
+typedef struct
+{
+    long numero_dador;
+    char nome_dador[26];
+    int  peso;
+    int  numero_dadivas;
+    char tipo_sanguineo[3];
+    char fator_rh;
+    data_tipo dt;
+} Dador;
+
+typedef struct local
+{
+    char nome_cidade[17];
+    char concelho[26];
+    char local[50];
+    char brigada[50];
+    hora_tipo hora_abertura;
+    hora_tipo hora_fecho;
+    data_tipo dt;
+
+} LocalRecolha;
+
+typedef struct recolhasangue
+{
+    data_tipo   dataRecolha;
+    char        concelho[26];
+    long        numero_dador;
+    Sinais      sinaisVitais;
+    int         quantidadeRecolha;
+    char        estadoDador;
+
+} RecolhaSangue;
+
+// DECLARAÇÃO DAS FUNÇÕES USADAS
+
+void    inicializarListaDeDadores(Dador *dador, int *qtd);
+void    inicializarListaDeLocais(LocalRecolha *localrecolha, int *qtd);
+
+void    menu_gestao_dadores_sangue(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue *lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais);
+void    menu_gestao_locais_recolha(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue *lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais);
+void    menu_gestao_recolhas_sangue(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue *lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais);
+void    menu_estatisticas(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue *lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais);
+
+void    menu_principal(Dador * dador, int qtd_dadores, LocalRecolha * localRecolha, int qtd_locais, RecolhaSangue *lista_recolhas_sangue, int qtd_recolhas, Sinais * lista_sinais, int qtd_sinais);
+
+int     validar_se_esta_aberto(LocalRecolha local, hora_tipo hora_abertura, hora_tipo hora_fecho);
+void    eliminarDador(Dador * dador, int *qtd);
+void    inserirDador(Dador * dador, int *qtd);
+void    consultarDadoresGalardoados(Dador * dador, int *qtd);
+void    listarDadores(Dador * dador, int * qtd_dadores);
+void    registarLocalRecolha(LocalRecolha * localRecolha, int *qtd);
+void    eliminarLocalRecolha (LocalRecolha * localRecolha, int *qtd);
+void    mostrarLocaisRecolha(LocalRecolha * locais, int *qtd_locais);
+void    listarLocaisRecolha(LocalRecolha * localRecolha, int *qtd_locais);
+
+int     validarNumeroDador(Dador * dador, int *qtd, int numeroDador);
+int     validarLocalRecolha(LocalRecolha * localRecolha, int *qtd, char *local);
+int     validar_peso(int peso);
+int     validar_tipo_sanguineo(char * tipo_sanguineo);
+int     validar_fator_rh(char fator_rh);
+int     validar_numero_dadivas(int valor);
+
+long     random_number(long min_num, long max_num);
+data_tipo validar_data();
+hora_tipo validar_hora();
+
+
+void    registarRecolha(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue * lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais);
+void    registarSinaisVitais(Dador * dador, int * qtd, RecolhaSangue * lista_recolhas_sangue, int *qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais);
+char    procurarUltimosSinaisVitais(RecolhaSangue * lista_recolhas_sangue, Sinais * lista_sinais, int * qtd_sinais);
+void    editarRecolha(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue * lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais);
+
+
+
+int main() {
+
+    //  DEFINIR AS VARIÁVEIS QUE INTERESSAM PARA OS DADORES E LOCAIS DE RECOLHA
+
+    int qtd_dadores = 0;
+    int qtd_locais = 0;
+    int qtd_recolhas = 0;
+    int qtd_sinais = 0;
+
+    Dador           lista_dadores[MAX_DADORES];
+    LocalRecolha    lista_locais_recolha[MAX_LOCAIS];
+    RecolhaSangue   lista_recolhas_sangue[MAX_RECOLHAS];
+    Sinais          lista_sinais[MAX_SINAIS];
+
+    //  PREENCHER AS ESTRUTURAS DE DADOS COM VALORES INICIAIS
+
+    inicializarListaDeDadores(lista_dadores, &qtd_dadores);         // como lista_dadores é um vetor, estou a passar um ponteiro.
+    inicializarListaDeLocais(lista_locais_recolha, &qtd_locais);
+
+
+    menu_principal(lista_dadores, qtd_dadores, lista_locais_recolha, qtd_locais, lista_recolhas_sangue, qtd_recolhas, lista_sinais, qtd_sinais);
+    return 0;
+}
+
+void menu_principal(Dador * dador, int qtd_dadores, LocalRecolha * localRecolha, int qtd_locais, RecolhaSangue *lista_recolhas_sangue, int qtd_recolhas, Sinais * lista_sinais, int qtd_sinais) {
+
+    int opcao;
+    int retorno;
+
+    system("cls");
+
+    do {
+
+        printf("\n\nMENU PRINCIPAL\n\n1 - Gestao de Dadores de Sangue\n2 - Gestao de Locais de Recolha de Sangue\n3 - Recolha de Sangue\n4 - Estatisticas\n0 - Sair\n");
+        printf("\n\nSelecionar opcao: ");
+        fflush(stdin);
+        retorno = scanf("%d", &opcao);
+
+        if (opcao == 1) {
+            menu_gestao_dadores_sangue(dador, &qtd_dadores, localRecolha, &qtd_locais, lista_recolhas_sangue, &qtd_recolhas, lista_sinais, &qtd_sinais);
+        } else if (opcao == 2) {
+            menu_gestao_locais_recolha(dador, &qtd_dadores, localRecolha, &qtd_locais, lista_recolhas_sangue, &qtd_recolhas, lista_sinais, &qtd_sinais);
+        } else if (opcao == 3) {
+            menu_gestao_recolhas_sangue(dador, &qtd_dadores, localRecolha, &qtd_locais, lista_recolhas_sangue, &qtd_recolhas, lista_sinais, &qtd_sinais);
+        } else if (opcao == 4) {
+            menu_estatisticas(dador, &qtd_dadores, localRecolha, &qtd_locais, lista_recolhas_sangue, &qtd_recolhas, lista_sinais, &qtd_sinais);
+        } else if (opcao == 0) {
+
+        } else {
+
+            printf("Opcao invalida");
+        }
+
+        system("cls");
+
+    } while (opcao != 0 || retorno == 0);
+}
+
+void menu_gestao_dadores_sangue(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue *lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais) {
+
+    int opcao;
+    int retorno;
+
+    system("cls");
+
+
+    do {
+
+        printf("\n\nMENU GESTAO DE DADORES DE SANGUE\n\n1 - Inserir Dador\n2 - Eliminar Dador\n3 - Consultar Dadores galardoados\n4 - Listar Todos os Dadores\n0 - Voltar ao Menu Principal");
+        printf("\n\nSelecionar opcao: ");
+        fflush(stdin);
+        retorno = scanf("%d", &opcao);
+
+        if (opcao == 1) { // InserirDador
+            inserirDador(dador, qtd_dadores);
+        } else if (opcao == 2) {
+            eliminarDador(dador, qtd_dadores);
+        } else if (opcao == 3) {
+            consultarDadoresGalardoados(dador, qtd_dadores);
+        } else if (opcao == 4) {
+            listarDadores(dador, qtd_dadores);
+        } else if (opcao == 0) {
+            menu_principal(dador, *qtd_dadores, localRecolha, *qtd_locais, lista_recolhas_sangue, *qtd_recolhas, lista_sinais, *qtd_sinais);
+        }
+        system("cls");
+
+    } while (opcao != 0 || retorno == 0);
+}
+
+void menu_gestao_locais_recolha(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue *lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais) {
+
+    int opcao;
+    int retorno;
+
+    system("cls");
+
+
+    do {
+
+        printf("\n\nMENU GESTAO DE LOCAIS DE RECOLHA DE SANGUE\n\n1 - Registar dados de um Local de Recolha\n2 - Eliminar um Local de Recolha\n3 - Mostrar Locais de Recolha abertos em determinado periodo\n4 - Listar Locais de Recolha\n0 - Voltar ao Menu Principal");
+        printf("\n\nSelecionar opcao: ");
+        fflush(stdin);
+        retorno = scanf("%d", &opcao);
+
+        if (opcao == 1) {
+            registarLocalRecolha(localRecolha, qtd_locais);
+        } else if (opcao == 2) {
+            eliminarLocalRecolha(localRecolha, qtd_locais);
+        } else if (opcao == 3) {
+            mostrarLocaisRecolha(localRecolha, qtd_locais);
+        } else if (opcao == 4) {
+            listarLocaisRecolha(localRecolha, qtd_locais);
+        } else if (opcao == 0) {
+            menu_principal(dador, *qtd_dadores, localRecolha, *qtd_locais, lista_recolhas_sangue, *qtd_recolhas, lista_sinais, *qtd_sinais);
+        }
+        system("cls");
+
+    } while (opcao != 0 || retorno == 0);
+}
+
+
+void menu_gestao_recolhas_sangue(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue *lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais) {
+
+    int opcao;
+    int retorno;
+
+    system("cls");
+
+
+    do {
+
+        printf("\n\nMENU GESTAO DE RECOLHAS DE SANGUE\n\n1 - Nova Recolha de Sangue\n2 - Editar Recolha\n3 - Medir Sinais Vitais\n4 - Historico de Rastreios de um Utente\n0 - Voltar ao Menu Principal");
+        printf("\n\nSelecionar opcao: ");
+        fflush(stdin);
+        retorno = scanf("%d", &opcao);
+
+        if (opcao == 1) {
+            registarRecolha(dador, qtd_dadores, localRecolha, qtd_locais, lista_recolhas_sangue, qtd_recolhas, lista_sinais, qtd_sinais);
+        } else if (opcao == 2) {
+            editarRecolha(dador, qtd_dadores, localRecolha, qtd_locais, lista_recolhas_sangue, qtd_recolhas, lista_sinais, qtd_sinais);
+        } else if (opcao == 3) {
+            registarSinaisVitais(dador, qtd_dadores, lista_recolhas_sangue, qtd_recolhas, lista_sinais, qtd_sinais);
+        } else if (opcao == 4) {
+            //verHistorico(lista_recolhas_sangue, qtd_recolhas);
+        } else if (opcao == 0) {
+            menu_principal(dador, *qtd_dadores, localRecolha, *qtd_locais, lista_recolhas_sangue, *qtd_recolhas, lista_sinais, *qtd_sinais);
+        }
+        system("cls");
+
+
+    } while (opcao != 0 || retorno == 0);
+}
+
+void menu_estatisticas(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue *lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais) {
+
+    int opcao;
+    int retorno;
+
+    system("cls");
+
+
+    do {
+
+        printf("\n\nMENU ESTATISTICAS\n\n1 - Mostrar percentagem de pessoas de determinado grupo sanguineo\n2 - Listar 3 horarios com maior numero de recolhas\n3 - Mostrar grafico de evolucoes\n0 - Voltar ao Menu Principal");
+        printf("\n\nSelecionar opcao: ");
+        fflush(stdin);
+        retorno = scanf("%d", &opcao);
+
+        if (opcao == 1) {
+            //registarLocalRecolha(localRecolha, qtd_locais);
+        } else if (opcao == 2) {
+            //eliminarLocalRecolha(localRecolha, qtd_locais);
+        } else if (opcao == 3) {
+            //mostrarLocaisRecolha(localRecolha, qtd_locais);
+        } else if (opcao == 4) {
+            //listarLocaisRecolha(localRecolha, qtd_locais);
+        } else if (opcao == 0) {
+            menu_principal(dador, *qtd_dadores, localRecolha, *qtd_locais, lista_recolhas_sangue, *qtd_recolhas, lista_sinais, *qtd_sinais);
+        }
+        system("cls");
+
+
+    } while (opcao != 0 || retorno == 0);
+}
+
+//***********************
+//
+// parametro qtd passado por referência
+//***********************
+void inicializarListaDeDadores(Dador *dador, int *qtd) {
+
+    dador[0].numero_dador=191514;
+    strcpy(dador[0].nome_dador,"Bill Gates");
+    dador[0].dt.dia=28;
+    dador[0].dt.mes=10;
+    dador[0].dt.ano=1955;
+    dador[0].peso=75;
+    dador[0].numero_dadivas = 25;
+    strcpy(dador[0].tipo_sanguineo,"AB");
+    dador[0].fator_rh = '+';
+
+    dador[1].numero_dador=614172;
+    strcpy(dador[1].nome_dador,"Dennis Ritchie");
+    dador[1].dt.dia=9;
+    dador[1].dt.mes=9;
+    dador[1].dt.ano=1941;
+    dador[1].peso=80;
+    dador[1].numero_dadivas = 5;
+    strcpy(dador[1].tipo_sanguineo,"B");
+    dador[1].fator_rh = '-';
+
+    dador[2].numero_dador=935413;
+    strcpy(dador[2].nome_dador,"Marcelo Rebelo de Sousa");
+    dador[2].dt.dia=12;
+    dador[2].dt.mes=12;
+    dador[2].dt.ano=1948;
+    dador[2].peso=70;
+    dador[2].numero_dadivas = 15;
+    strcpy(dador[2].tipo_sanguineo,"O");
+    dador[2].fator_rh = '+';
+
+    dador[3].numero_dador=217159;
+    strcpy(dador[3].nome_dador,"Catarina Furtado");
+    dador[3].dt.dia=25;
+    dador[3].dt.mes=8;
+    dador[3].dt.ano=1972;
+    dador[3].peso=55;
+    dador[3].numero_dadivas = 50;
+    strcpy(dador[3].tipo_sanguineo,"B");
+    dador[3].fator_rh = '+';
+
+    dador[4].numero_dador=316668;
+    strcpy(dador[4].nome_dador,"Greta Thunberg");
+    dador[4].dt.dia=3;
+    dador[4].dt.mes=1;
+    dador[4].dt.ano=2003;
+    dador[4].peso=45;
+    dador[4].numero_dadivas = 5;
+    strcpy(dador[4].tipo_sanguineo,"A");
+    dador[4].fator_rh = '-';
+
+    *qtd = 5;
+}
+
+
+//***********************
+//
+// parametro qtd passado por referência
+//***********************
+void inicializarListaDeLocais(LocalRecolha *localrecolha, int *qtd)
+{
+    strcpy(localrecolha[0].nome_cidade, "Porto");
+    strcpy(localrecolha[0].concelho, "Matosinhos");
+    strcpy(localrecolha[0].local, "Quartel Bombeiros Voluntarios De Leixoes");
+    strcpy(localrecolha[0].brigada, "CRUZ VERMELHA DE MATOSINHOS");
+    localrecolha[0].hora_abertura.hora = 9;
+    localrecolha[0].hora_abertura.minuto = 0;
+    localrecolha[0].hora_fecho.hora = 19;
+    localrecolha[0].hora_fecho.hora = 0;
+
+
+    strcpy(localrecolha[1].nome_cidade, "Gaia");
+    strcpy(localrecolha[1].concelho, "Vila Nova de Gaia");
+    strcpy(localrecolha[1].local, "Salao Paroquial De Mafamude - Gaia");
+    strcpy(localrecolha[1].brigada, "MAFAMUDE (GAIA)");
+    localrecolha[1].hora_abertura.hora = 9;
+    localrecolha[1].hora_abertura.minuto = 0;
+    localrecolha[1].hora_fecho.hora = 13;
+    localrecolha[1].hora_fecho.hora = 0;
+
+    strcpy(localrecolha[2].nome_cidade, "Gaia");
+    strcpy(localrecolha[2].concelho, "Vila Nova de Gaia");
+    strcpy(localrecolha[2].local, "Seminario Da Boa Nova De Valadares");
+    strcpy(localrecolha[2].brigada, "VALADARES (GAIA)");
+    localrecolha[2].hora_abertura.hora = 9;
+    localrecolha[2].hora_abertura.minuto = 0;
+    localrecolha[2].hora_fecho.hora = 13;
+    localrecolha[2].hora_fecho.hora = 0;
+
+    *qtd=3;
+}
+
+
+void inserirDador(Dador * dador, int *qtd){
+
+    Dador   novoDador;
+    data_tipo   data_validada;
+    int     flag_nr_dador = 0;
+    int     flag_data = 0;
+    int     retorno = 0;
+    int     flag = 0;
+
+
+    //------------------------------------
+    printf("\nNome do dador: ");
+    fflush(stdin);
+    fgets(novoDador.nome_dador, 25, stdin);
+    novoDador.nome_dador[strcspn(novoDador.nome_dador, "\n")] = 0;
+
+    //------------------------------------
+    while (flag_nr_dador == 0) {
+
+        novoDador.numero_dador = random_number(100000,999999);
+        printf("\nNúmero de dador: %ld", novoDador.numero_dador );
+
+        flag_nr_dador = validarNumeroDador(dador, qtd, novoDador.numero_dador);
+    }
+
+    //------------------------------------
+    while (flag_data == 0) {
+
+        data_validada = validar_data();
+        flag_data = data_validada.valid;
+
+    }
+    novoDador.dt.ano = data_validada.ano;
+    novoDador.dt.mes = data_validada.mes;
+    novoDador.dt.dia = data_validada.dia;
+
+     //------------------------------------
+    retorno = 0;
+    flag = 0;
+    while (flag == 0 || retorno == 0) {
+
+        printf("\nInserir peso do dador: ");
+        fflush(stdin);
+        retorno = scanf("%d", &novoDador.peso);
+
+        flag = validar_peso(novoDador.peso);
+    }
+
+    //------------------------------------
+    retorno = 0;
+    flag = 0;
+
+    while (flag == 0 || retorno == 0) {
+
+        printf("\nInserir numero de dadivas: ");
+        fflush(stdin);
+        retorno = scanf("%d", &novoDador.numero_dadivas);
+
+        flag = validar_numero_dadivas(novoDador.numero_dadivas);
+    }
+
+    //------------------------------------
+    flag = 0;
+    while (flag == 0) {
+
+        printf("\nInserir tipo sanguineo (AB, O, A, B): ");
+        fflush(stdin);
+        fgets(novoDador.tipo_sanguineo, 3, stdin);
+
+        novoDador.tipo_sanguineo[strcspn(novoDador.tipo_sanguineo, "\n")] = 0;
+
+        flag = validar_tipo_sanguineo(novoDador.tipo_sanguineo);
+    }
+
+    //------------------------------------
+    flag = 0;
+    while (flag == 0) {
+
+        printf("\nInserir o fator Rh (+ se positivo ou - se negativo): ");
+        fflush(stdin);
+        novoDador.fator_rh = fgetchar();
+
+        flag = validar_fator_rh(novoDador.fator_rh);
+    }
+
+    dador[*qtd] = novoDador;
+    *qtd = *qtd + 1;
+
+    printf("\n\n\nPrima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+//***********************
+//
+// parametro qtd passado por referência
+//***********************
+void eliminarDador(Dador * dador, int *qtd)
+{
+    long int numeroDador;
+    int     i;
+    int     j;
+    int     retorno = 0;
+    int     flag = 0;
+
+    while (retorno == 0) {
+
+        printf("Introduza o número do dador que pretende eliminar:\n");
+        fflush(stdin);
+        retorno = scanf("%ld", &numeroDador);
+
+    }
+
+
+    for (i = 0; i < *qtd; i++) {
+
+        if (numeroDador == dador[i].numero_dador)
+        {
+            printf("\nDador encontrado e eliminado!\n");
+
+            for(j = i; j < *qtd-1; j++) {
+                dador[j] = dador[j+1];
+            }
+            printf("Registo de dador eliminado!\n");
+            *qtd = *qtd - 1;
+            flag = 1;
+            break;
+        }
+    }
+    if (flag == 0) {
+        printf("Dador não encontrado!\n");
+    }
+    printf("\n\n\nPrima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+
+//***********************
+//
+// parametro qtd passado por referência
+//***********************
+void consultarDadoresGalardoados(Dador * dador, int *qtd) {
+
+    char    galardao[100];
+    int     i;
+
+
+    printf("\nTotal de dadores: %d", *qtd);
+    printf("\nLista de dadores Galardoados:");
+
+    // printf("\n\n| numero | nome | data de nascimento | peso | tipo sanguineo | fator rh | numero de dávidas | galardão |");
+
+    for (i=0; i<*qtd; i++) {
+
+        if (dador[i].numero_dadivas >= 10) {
+
+            if (dador[i].numero_dadivas >= 10 && dador[i].numero_dadivas<20) {
+                strcpy(galardao,"Diploma");
+            } else if (dador[i].numero_dadivas >= 20 && dador[i].numero_dadivas<40) {
+                strcpy(galardao,"Medalha cobreada");
+            } else if (dador[i].numero_dadivas >= 40 && dador[i].numero_dadivas<60) {
+                strcpy(galardao,"Medalha prateada");
+            } else if (dador[i].numero_dadivas >= 60 && dador[i].numero_dadivas<100) {
+                strcpy(galardao,"Medalha dourada");
+            } else if (dador[i].numero_dadivas >= 100) {
+                strcpy(galardao,"Medalha dourada + certificado");
+            }
+
+            printf("\n| %ld | %s | %d-%d-%d | %d | %s%c | %d | %s |", dador[i].numero_dador, dador[i].nome_dador, dador[i].dt.dia, dador[i].dt.mes, dador[i].dt.ano, dador[i].peso, dador[i].tipo_sanguineo, dador[i].fator_rh, dador[i].numero_dadivas, galardao);
+
+        }
+    }
+    printf("\n\n\nPrima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+
+
+void listarDadores(Dador * dador, int * qtd_dadores) {
+
+    int i;
+
+    //  MOSTRAR OS DADORES POR CIMA DO MENU
+
+    for (i=0; i<*qtd_dadores; i++) {
+
+        printf("\n| %ld | %s | %d-%d-%d | %d | %s%c | %d |",
+               dador[i].numero_dador,
+               dador[i].nome_dador,
+               dador[i].dt.dia, dador[i].dt.mes, dador[i].dt.ano,
+               dador[i].peso,
+               dador[i].tipo_sanguineo,
+               dador[i].fator_rh,
+               dador[i].numero_dadivas);
+    }
+
+    printf("\n\n\nPrima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+
+
+
+
+
+void registarLocalRecolha(LocalRecolha * localRecolha, int *qtd){
+
+    LocalRecolha    novoLocalRecolha;
+    int             flag = 0;
+    hora_tipo       hora_validada;
+    data_tipo       data_validada;
+
+    //----------------------------------
+    printf("\nNome da cidade do local de recolha: ");
+    fflush(stdin);
+    fgets(novoLocalRecolha.nome_cidade,17,stdin);
+    novoLocalRecolha.nome_cidade[strcspn(novoLocalRecolha.nome_cidade, "\n")]=0;
+
+
+
+    //----------------------------------
+    flag=0;
+    while (flag == 0) {
+
+        data_validada = validar_data();
+        flag = data_validada.valid;
+    }
+
+    novoLocalRecolha.dt.ano = data_validada.ano;
+    novoLocalRecolha.dt.mes = data_validada.mes;
+    novoLocalRecolha.dt.dia = data_validada.dia;
+
+    //----------------------------------
+
+
+         printf("\nConcelho do local de recolha: ");
+         fflush(stdin);
+         fgets(novoLocalRecolha.concelho,25,stdin);
+         novoLocalRecolha.concelho[strcspn(novoLocalRecolha.concelho, "\n")]=0;
+
+
+         flag=0;
+         while (flag == 0) {
+
+             printf("\nNome do local de recolha: ");
+             fflush(stdin);
+             fgets(novoLocalRecolha.local,50,stdin);
+             novoLocalRecolha.local[strcspn(novoLocalRecolha.local, "\n")]=0;
+
+        flag = validarLocalRecolha(localRecolha, qtd, novoLocalRecolha.local);
+    }
+
+
+        printf("\nBrigada do local de recolha: ");
+        fflush(stdin);
+        fgets(novoLocalRecolha.brigada,50,stdin);
+        novoLocalRecolha.brigada[strcspn(novoLocalRecolha.brigada, "\n")]=0;
+
+
+        flag=0;
+        printf("\nHora de abertura (HH:mm): ");
+        while (flag == 0) {
+
+        hora_validada = validar_hora();
+        flag = hora_validada.valid;
+
+        }
+        novoLocalRecolha.hora_abertura.hora = hora_validada.hora;
+        novoLocalRecolha.hora_abertura.minuto = hora_validada.minuto;
+
+
+        flag=0;
+        printf("\nHora de fecho (HH:mm): ");
+        while (flag == 0) {
+
+        hora_validada = validar_hora();
+        flag = hora_validada.valid;
+
+        }
+        novoLocalRecolha.hora_fecho.hora = hora_validada.hora;
+        novoLocalRecolha.hora_fecho.minuto = hora_validada.minuto;
+
+
+
+        localRecolha[*qtd] = novoLocalRecolha;
+        *qtd = *qtd + 1;
+
+    printf("\n\n\nRegito inserido. Prima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+
+//***********************
+//
+//***********************
+void eliminarLocalRecolha (LocalRecolha * localRecolha, int *qtd)
+{
+    char nomeLocal[50];
+    printf("Introduza o nome do local de recolha que pretende eliminar:\n");
+    fflush(stdin);
+    fgets(nomeLocal,50,stdin);
+    strtok(nomeLocal, "\n");
+
+    int flag = 0;
+    for (int k = 0; k < *qtd; k++)
+    {
+        if (strcmp(nomeLocal,localRecolha[k].local)== 0)
+        {
+            printf("Local de recolha encontrado!\n");
+            for(int y = k; y < *qtd-1; y++)
+            {
+                localRecolha[y] = localRecolha[y+1];
+            }
+            printf("Registo de local de recolha eliminado!\n");
+            *qtd = *qtd - 1;
+            flag = 1;
+            break;
+        }
+    }
+    if (flag == 0) {
+        printf("Local de recolha não encontrado!\n");
+    }
+    printf("\n\n\nPrima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+void mostrarLocaisRecolha(LocalRecolha * localRecolha, int *qtd_locais) {
+
+    hora_tipo    hora_abertura;
+    hora_tipo    hora_fecho;
+    int          flag_hora;
+
+
+
+        flag_hora = 0;
+        printf("\nHora de abertura (HH:mm): ");
+        while (flag_hora == 0) {
+
+        hora_abertura = validar_hora();
+        flag_hora = hora_abertura.valid;
+
+        }
+
+
+        flag_hora = 0;
+        printf("\nHora de fecho (HH:mm): ");
+        while (flag_hora == 0) {
+
+        hora_fecho = validar_hora();
+        flag_hora = hora_fecho.valid;
+
+        }
+
+
+
+    for (int i; i< *qtd_locais; i++) {
+
+        if (validar_se_esta_aberto(localRecolha[i], hora_abertura, hora_fecho) == 1) {
+            printf("\n| %s | %s | %s | %s | %02d:%02d | %02d:%02d |",
+               localRecolha[i].local,
+               localRecolha[i].nome_cidade,
+               localRecolha[i].concelho,
+               localRecolha[i].brigada,
+               localRecolha[i].hora_abertura.hora,
+               localRecolha[i].hora_abertura.minuto,
+               localRecolha[i].hora_fecho.hora,
+               localRecolha[i].hora_fecho.minuto);
+        }
+    }
+    printf("\n\n\nPrima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+void listarLocaisRecolha(LocalRecolha * localRecolha, int *qtd_locais) {
+
+    int i;
+
+    for (i=0; i<*qtd_locais; i++) {
+
+        printf("\n| %s | %s | %s | %s | %02d:%02d | %02d:%02d |",
+               localRecolha[i].local,
+               localRecolha[i].nome_cidade,
+               localRecolha[i].concelho,
+               localRecolha[i].brigada,
+               localRecolha[i].hora_abertura.hora,
+               localRecolha[i].hora_abertura.minuto,
+               localRecolha[i].hora_fecho.hora,
+               localRecolha[i].hora_fecho.minuto);
+    }
+
+    printf("\n\n\nPrima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+
+
+
+int validar_se_esta_aberto(LocalRecolha local, hora_tipo hora_abertura, hora_tipo hora_fecho) {
+
+    int flag = 0;
+
+    int minutos_inf, minutos_sup, minutos_1, minutos_2;
+
+    minutos_inf = local.hora_abertura.hora * 60 + local.hora_abertura.minuto;
+    minutos_sup = local.hora_fecho.hora * 60 + local.hora_fecho.minuto;
+    minutos_1 = hora_abertura.hora * 60 + hora_abertura.minuto;
+    minutos_2 = hora_fecho.hora * 60 + hora_fecho.minuto;
+
+    if  ((minutos_1 >= minutos_inf) && (minutos_1 <= minutos_sup)
+         && (minutos_2 >= minutos_inf) && (minutos_2 <= minutos_sup)){
+
+        flag = 1;
+    }
+    return flag;
+}
+
+
+
+int validarNumeroDador(Dador * dador, int *qtd, int numeroDador)
+{
+    int flag = 1;
+
+    for(int i = 0; i < *qtd; i++) {
+
+        if(dador[i].numero_dador == numeroDador)
+        {
+            flag = 0;
+            break;
+        }
+    }
+
+    return flag;
+}
+
+int    validarLocalRecolha(LocalRecolha * localRecolha, int *qtd, char *local)
+{
+    int flag = 1;
+    int i;
+
+    for(i = 0; i < *qtd; i++) {
+
+        if (strcmp(localRecolha[i].local, local) == 0)
+        {
+            flag = 0;
+            break;
+        }
+    }
+
+    return flag;
+}
+
+
+int validar_peso(int peso)
+{
+    int flag=1;
+    if (peso<50 || peso>150)
+    {
+        flag=0;
+        printf("\nPeso deve estar compreendido entre 50 e 150");
+    }
+    return flag;
+}
+
+int validar_tipo_sanguineo(char * tipo_sanguineo) {
+
+    int i;
+
+    for (i=0; i< strlen(tipo_sanguineo); i++) {
+
+        tipo_sanguineo[i] = toupper(tipo_sanguineo[i]);
+    }
+
+
+    if ((strcmp(tipo_sanguineo, "A") == 0) || (strcmp(tipo_sanguineo, "B") == 0) || (strcmp(tipo_sanguineo, "AB") == 0) || (strcmp(tipo_sanguineo, "O") == 0))
+    {
+        return(1);
+    }
+    else
+    {
+        printf("\nO tipo sanguíneo deve ser A ou B ou AB ou O");
+        return(0);
+    }
+
+}
+
+int validar_fator_rh(char fator_rh) {
+
+    int flag=0;
+    if ((fator_rh == '+') || (fator_rh == '-'))
+    {
+        flag=1;
+    }
+    else
+    {
+        printf("\nO fator rh tem de ser + ou -");
+    }
+    return flag;
+}
+
+
+int validar_numero_dadivas(int valor) {
+
+    if (valor >= 0 && valor <= 100) {
+        return(1);
+    } else {
+        return(0);
+    }
+}
+
+long random_number(long min_num, long max_num)
+{
+    long result = 0, low_num = 0, hi_num = 0;
+
+    if (min_num < max_num)
+    {
+        low_num = min_num;
+        hi_num = max_num + 1; // include max_num in output
+    } else {
+        low_num = max_num + 1; // include max_num in output
+        hi_num = min_num;
+    }
+
+    srand(time(NULL));
+    result = (rand() % (hi_num - low_num)) + low_num;
+    return result;
+}
+
+
+data_tipo validar_data() {
+
+    data_tipo   data_a_validar;
+    int         dd,mm,yy;
+
+    data_a_validar.valid = 0;
+
+    printf("\nIntroduza uma data no formato AAAA-MM-DD: ");
+    fflush(stdin);
+    scanf("%d-%d-%d",&yy,&mm,&dd);
+
+    //check year
+    if(yy>=1900 && yy<=9999)
+    {
+        //check month
+        if(mm>=1 && mm<=12)
+        {
+            //check days
+            if((dd>=1 && dd<=31) && (mm==1 || mm==3 || mm==5 || mm==7 || mm==8 || mm==10 || mm==12))
+                data_a_validar.valid = 1;
+
+            else if((dd>=1 && dd<=30) && (mm==4 || mm==6 || mm==9 || mm==11))
+                data_a_validar.valid = 1;
+            else if((dd>=1 && dd<=28) && (mm==2))
+                data_a_validar.valid = 1;
+            else if(dd==29 && mm==2 && (yy%400==0 ||(yy%4==0 && yy%100!=0)))
+                data_a_validar.valid = 1;
+            else
+                data_a_validar.valid = 0;
+        }
+        else
+        {
+            data_a_validar.valid = 0;
+        }
+    }
+    else
+    {
+        data_a_validar.valid = 0;
+    }
+
+    data_a_validar.ano = yy;
+    data_a_validar.mes = mm;
+    data_a_validar.dia = dd;
+
+    return(data_a_validar);
+}
+
+
+hora_tipo validar_hora() {
+
+    hora_tipo   hora_a_validar;
+    int         hh,mm;
+    int         retorno;
+
+    hora_a_validar.valid = 0;
+
+    printf("\nIntroduza uma hora no formato HH:MM: ");
+    fflush(stdin);
+    retorno = scanf("%d:%d",&hh,&mm);
+
+    if (retorno == 0){
+        hora_a_validar.valid = 0;
+
+    }else{
+        if (hh>=0 && hh<=23 && mm>=0 && mm<=59){
+            hora_a_validar.valid = 1;
+        }else{
+            hora_a_validar.valid = 0;
+        }
+    }
+
+    hora_a_validar.hora = hh;
+    hora_a_validar.minuto = mm;
+
+    return(hora_a_validar);
+}
+void registarSinaisVitais(Dador * dador, int * qtd, RecolhaSangue * lista_recolhas_sangue, int *qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais){
+
+    Sinais  novosSinais;
+    int     flag;
+    int     retorno;
+    data_tipo   data_validada;
+
+    retorno=0;
+    flag=1;
+    while (flag == 1 || retorno ==0){
+    printf ("\nInsira o numero do dador que quer regitar: ");
+    fflush(stdin);
+    retorno = scanf("%ld", &novosSinais.numero_dador);
+
+    flag = validarNumeroDador(dador, qtd, novosSinais.numero_dador);
+    if (flag == 1){
+        printf("> Numero de dador nao existente\n");
+        }
+
+    }
+
+
+    printf ("\nInsira a data dos sinais viatais ");
+    flag=0;
+    while (flag == 0) {
+
+        data_validada = validar_data();
+        flag = data_validada.valid;
+    }
+
+    novosSinais.dataRecolha = data_validada;
+
+
+
+
+    retorno=0;
+    flag=0;
+    while (flag == 0 || retorno ==0){
+    printf ("\nInsira a temperatura do dador (tt.t): ");
+    fflush(stdin);
+    retorno = scanf("%f", &novosSinais.temp);
+
+        if (novosSinais.temp >= 35.5 && novosSinais.temp < 41.0){
+            flag=1;
+        }
+    }
+
+
+
+    retorno=0;
+    flag=0;
+    while (flag == 0 || retorno ==0){
+    printf ("\nInsira a tensao arterial sistolica do dador (mmHg): ");
+    fflush(stdin);
+    retorno = scanf("%d", &novosSinais.t_a_sistolica);
+
+        if (novosSinais.t_a_sistolica > 40 && novosSinais.t_a_sistolica < 250){
+            flag=1;
+        }
+    }
+
+
+    retorno=0;
+    flag=0;
+    while (flag == 0 || retorno ==0){
+    printf ("\nInsira a tensao arterial diastolica (mmHg): ");
+    fflush(stdin);
+    retorno = scanf("%d", &novosSinais.t_a_diastolica);
+
+        if (novosSinais.t_a_diastolica > 40 && novosSinais.t_a_diastolica < 250){
+            flag=1;
+        }
+    }
+
+    if(novosSinais.temp < 37.5 &&
+       novosSinais.t_a_sistolica >= 100
+       && novosSinais.t_a_sistolica <= 180
+       && novosSinais.t_a_diastolica >= 60
+       && novosSinais.t_a_diastolica <= 100){
+
+        novosSinais.estadoDador = 'S';
+        printf(">Dador APTO");
+
+    }else{
+        novosSinais.estadoDador = 'N';
+        printf(">Dador INAPTO");
+    }
+
+    //lista_sinais[qtd_sinais] = novosSinais;
+    //*qtd_sinais = *qtd_sinais + 1;
+
+
+    printf("\n\nSinais vitais registados. Prima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+
+void registarRecolha(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue * lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais){
+    RecolhaSangue  novaRecolha;
+    int            flag;
+    int            retorno;
+    data_tipo      data_validada;
+    char           estadoDador;
+    char           local[50];
+
+
+    printf ("\nInsira a data da recolha ");
+    flag=0;
+    while (flag == 0) {
+
+        data_validada = validar_data();
+        flag = data_validada.valid;
+    }
+
+    novaRecolha.dataRecolha = data_validada;
+
+
+
+    retorno=0;
+    flag=1;
+    while (flag == 1 || retorno ==0){
+        printf ("\nInsira o numero do dador que quer regitar: ");
+        fflush(stdin);
+        retorno = scanf("%ld", &novaRecolha.numero_dador);
+
+        flag = validarNumeroDador(dador, qtd_dadores, novaRecolha.numero_dador);
+        if (flag == 1){
+            printf("> Numero de dador nao existente\n");
+            }
+
+
+
+    }
+
+    estadoDador = procurarUltimosSinaisVitais(&novaRecolha, lista_sinais, qtd_sinais);
+
+
+    if (estadoDador == 'N') {
+
+        printf("\n\n\nEste dador e inapto, pelo que a recolha nao pode ser realizada. Prima qualquer tecla para voltar ao menu anterior");
+        getch();
+        system("cls");
+        return;
+    }
+
+
+    flag=0;
+    while (flag == 0) {
+
+             printf("\nNome do local de recolha: ");
+             fflush(stdin);
+             fgets(local,50,stdin);
+             local[strcspn(local, "\n")]=0;
+
+            flag = validarLocalRecolha(localRecolha, qtd_locais, local);
+    }
+
+
+    retorno=0;
+    flag=0;
+    while (flag == 0 || retorno ==0){
+        printf ("\nInsira a quantidade de sangue doado (ml): ");
+        fflush(stdin);
+        retorno = scanf("%d", &novaRecolha.quantidadeRecolha);
+
+        if (novaRecolha.quantidadeRecolha >= 100 && novaRecolha.quantidadeRecolha < 600){
+            flag=1;
+        }
+    }
+
+    if(novaRecolha.quantidadeRecolha <= 450){
+        printf(">Quantidade recolha aceite!");
+    }else{
+        printf("\n\n\n>Quantidade recolha nao aceite. Prima qualquer tecla para voltar ao menu anterior");
+        getch();
+        system("cls");
+        return;
+
+    }
+}
+
+char procurarUltimosSinaisVitais(RecolhaSangue * lista_recolhas_sangue, Sinais * lista_sinais, int * qtd_sinais) {
+
+    char valor = 'N';
+    int i = 0;
+
+
+    for (i=0; i<*qtd_sinais;i++) {
+
+        if (lista_sinais[i].dataRecolha.ano == lista_recolhas_sangue->dataRecolha.ano &&
+            lista_sinais[i].dataRecolha.mes == lista_recolhas_sangue->dataRecolha.mes &&
+            lista_sinais[i].dataRecolha.dia == lista_recolhas_sangue->dataRecolha.dia &&
+            lista_sinais[i].numero_dador == lista_recolhas_sangue->numero_dador &&
+            lista_sinais[i].estadoDador == 'S') {
+
+                    valor = 'S';
+            }
+    }
+
+    return valor;
+}
+
+
+void editarRecolha(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue * lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais){
+
+    RecolhaSangue   novaRecolha;
+    int             flag;
+    int             retorno;
+    data_tipo       data_validada;
+    char            estadoDador;
+    char            local[50];
+    long            numeroDador;
+    int i;
+    int j;
+    int resposta;
+
+    //------------------------------------------
+    // INTRODUZIR O NUMERO DE DADOR CUJA RECOLHA PRETENDE EDITAR
+    //------------------------------------------
+    retorno = 0;
+    flag = 1;
+    while (flag == 1 || retorno ==0){
+
+        printf ("\nInsira o numero do dador que pretende editar: ");
+        fflush(stdin);
+        retorno = scanf("%ld", &numeroDador);
+
+        flag = validarNumeroDador(dador, qtd_dadores, numeroDador);
+        if (flag == 1){
+            printf("> Numero de dador nao existente\n");
+        }
+    }
+
+    //------------------------------------------
+    // DEPOIS DE TER O NUMÉRO DO DADOR, PROCURAR A RECOLHA DELE
+    //------------------------------------------
+    flag = 0;
+    j = 0;
+    for (i=0; i<*qtd_recolhas; i++) {
+
+        if (lista_recolhas_sangue[i].numero_dador == numeroDador) {
+            flag = 1;
+            j = i;
+            break;
+        }
+    }
+
+    //------------------------------------------
+    // DEPOIS DO CICLO DE PESQUISA DE UMA RECOLHA DE UM DADOR
+    // SE FLAG = 1, ESSE DADOR TEM UMA RECOLHA, E ESSA RECOLHA TEM
+    // INDICE J
+    //------------------------------------------
+
+    if (flag == 0) {
+
+        // Não encontrou Recolha deste dados
+
+        printf("\n\n\nLamentamos mas nao existe recolha relativa a esse dador. Prima qualquer tecla para voltar ao menu anterior");
+        getch();
+        system("cls");
+        return;
+    }
+
+    //------------------------------------------
+    // DADOR ENCONTRADO - PERGUNTAR SE QUER EDITAR A DATA GUARDADA
+    //------------------------------------------
+
+    novaRecolha.numero_dador = numeroDador;
+
+    printf("\nA data de recolha e %04d-%02d-%02d. Pretende alterar (S/N)? ",
+           lista_recolhas_sangue[j].dataRecolha.ano,
+           lista_recolhas_sangue[j].dataRecolha.mes,
+           lista_recolhas_sangue[j].dataRecolha.dia);
+    resposta = getch();
+
+    if (resposta == 'S') {
+
+        //------------------------------------------
+        printf("\nInsira a data da recolha: ");
+        flag = 0;
+        while (flag == 0) {
+
+            data_validada = validar_data();
+            flag = data_validada.valid;
+        }
+
+        novaRecolha.dataRecolha = data_validada;
+    }
+
+    //------------------------------------------
+
+    printf("\nO Local de recolha e %s. Pretende alterar (S/N)? ",
+           lista_recolhas_sangue[j].concelho);
+    resposta = getch();
+
+    if (resposta == 'S') {
+
+        //------------------------------------------
+        flag = 0;
+        while (flag == 0) {
+
+            printf("\nNome do local de recolha: ");
+            fflush(stdin);
+            fgets(local, 50, stdin);
+            local[strcspn(local, "\n")]=0;
+
+            flag = validarLocalRecolha(localRecolha, qtd_locais, local);
+        }
+    }
+
+    //------------------------------------------
+    printf("\nA quantidade de sangue doada foi de %d. Pretende alterar (S/N)? ",
+           lista_recolhas_sangue[j].quantidadeRecolha);
+    resposta = getch();
+
+    if (resposta == 'S') {
+
+        //------------------------------------------
+        retorno = 0;
+        flag = 0;
+        while (flag == 0 || retorno ==0){
+            printf ("\nInsira a quantidade de sangue doado (em ml e <= 450): ");
+            fflush(stdin);
+            retorno = scanf("%d", &novaRecolha.quantidadeRecolha);
+
+            if (novaRecolha.quantidadeRecolha >= 100 && novaRecolha.quantidadeRecolha < 600){
+                flag=1;
+            }
+        }
+
+        if (novaRecolha.quantidadeRecolha <= 450){
+            printf("> Quantidade recolha aceite!");
+
+        } else {
+
+            printf("\n\n\n> Quantidade recolha nao aceite. Prima qualquer tecla para voltar ao menu anterior");
+            getch();
+            system("cls");
+            return;
+        }
+    }
+
+    //------------------------------------
+    lista_recolhas_sangue[j] = novaRecolha;
+
+    printf("\n\n\nRegisto alterado. Prima qualquer tecla para voltar ao menu anterior");
+    getch();
+    system("cls");
+}
+
+void historicoRecolha(Dador * dador, int * qtd_dadores, LocalRecolha * localRecolha, int * qtd_locais, RecolhaSangue * lista_recolhas_sangue, int * qtd_recolhas, Sinais * lista_sinais, int * qtd_sinais) {
+
+    int     flag, retorno, i, num_recolhas;
+    long    numeroDador;
+    char    local[50];
+    int     quantidade;
+    //------------------------------------------
+    // INTRODUZIR O NUMERO DE DADOR CUJA RECOLHA PRETENDE OBTER HISTÓRICO
+    //------------------------------------------
+    retorno = 0;
+    flag = 1;
+    while (flag == 1 || retorno ==0){
+
+        printf ("\nInsira o numero do dador que pretende obter o historico: ");
+        fflush(stdin);
+        retorno = scanf("%ld", &numeroDador);
+
+        flag = validarNumeroDador(dador, qtd_dadores, numeroDador);
+        if (flag == 1){
+            printf("> Numero de dador nao existente\n");
+        }
+    }
+
+    //------------------------------------------
+    // O HISTÓRICO ESTÁ NA LISTA lista_sinais
+    // OUTRAS INFORMAÇÕES ESTÃO NA LISTA lista_recolhas_sangue
+    // ENTÃO, TEM DE SE PROCURAR O DADOR PARA EXTRAIR OS DADOS
+    // COMPLEMENTARES, QUE SÃO O LOCAL E A QUANTIDADE
+    //------------------------------------------
+    quantidade = 0;
+    strcpy(local, "---");
+
+    for (i=0; i<*qtd_recolhas; i++) {
+
+        if (lista_recolhas_sangue[i].numero_dador == numeroDador) {
+
+            strcpy(local, lista_recolhas_sangue[i].concelho);
+            quantidade = lista_recolhas_sangue[i].quantidadeRecolha;
+            break;
+
+        }
+    }
+
+    //------------------------------------------
+    // PERCORRER AS RECOLHAS TODAS E VER QUAIS A DO DADOR INTRODUZIDO
+    //------------------------------------------
+
+    num_recolhas = 0;
+    printf("\n| Data | Local | Temperatura | T.a.sistolica | T.a.diastolica | Quantidade | Estado");
+
+    for (i=0; i<*qtd_sinais; i++) {
+
+        // PROCURAR NA LISTA DE SINAIS O  DADO PRETENDIDO
+
+        if (lista_sinais[i].numero_dador == numeroDador) {
+
+            num_recolhas++;
+
+            printf("\n| %04d-%02d-%02d | %s | %.1f | %d | %d | %d | %c |",
+                lista_sinais[i].dataRecolha.ano,
+                lista_sinais[i].dataRecolha.mes,
+                lista_sinais[i].dataRecolha.dia,
+                local,
+                lista_sinais[i].temp,
+                lista_sinais[i].t_a_diastolica,
+                lista_sinais[i].t_a_sistolica,
+                quantidade,
+                lista_sinais[i].estadoDador);
+
+        }
+
+    }
+
+    printf("\n\n\nEste dador tem um histórico de %d recolhas registadas. \nPrima qualquer tecla para voltar ao menu anterior", num_recolhas);
+    getch();
+    system("cls");
+}
